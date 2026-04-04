@@ -27,7 +27,10 @@ export function AppProvider({ children }) {
   const [transactions, setTransactions] = useState(loadTransactions);
   const [notifications, setNotifications] = useState(loadNotifications);
   const [role, setRole]                 = useState(() => localStorage.getItem('ledger_role') || 'viewer');
-  const [darkMode, setDarkMode]         = useState(() => localStorage.getItem('ledger_dark') === 'true');
+  const [darkMode, setDarkMode]         = useState(() => {
+    const saved = localStorage.getItem('ledger_dark');
+    return saved !== null ? saved === 'true' : true;
+  });
 
   // Persist transactions to localStorage whenever they change
   useEffect(() => {

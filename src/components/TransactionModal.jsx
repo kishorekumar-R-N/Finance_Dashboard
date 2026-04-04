@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { CATEGORIES } from '../data/transactions';
+import toast from 'react-hot-toast';
 
 const EMPTY_FORM = {
   description: '',
@@ -12,7 +13,7 @@ const EMPTY_FORM = {
 };
 
 export default function TransactionModal({ onClose, editTxn = null }) {
-  const { addTransaction, editTransaction } = useApp();
+  const { addTransaction, editTransaction, transactions } = useApp();
   const [form, setForm]     = useState(editTxn ? {
     description: editTxn.description,
     amount: String(editTxn.amount),
@@ -43,7 +44,27 @@ export default function TransactionModal({ onClose, editTxn = null }) {
     const e = validate();
     if (Object.keys(e).length > 0) { setErrors(e); return; }
 
-    const payload = { ...form, amount: Number(form.amount) };
+    const numAmount = Number(form.amount);
+
+    if (form.type === 'expense') {
+      const totalBalance = transactions.reduce((acc, t) => {
+        return acc + (t.type === 'income' ? t.amount : -t.amount);
+      }, 0);
+      
+      let balanceToCheck = totalBalance;
+      if (editTxn && editTxn.type === 'expense') {
+        balanceToCheck += editTxn.amount;
+      } else if (editTxn && editTxn.type === 'income') {
+        balanceToCheck -= editTxn.amount;
+      }
+      
+      if (numAmount > balanceToCheck) {
+        toast.error('Transaction cannot be made because not enough of balance');
+        return;
+      }
+    }
+
+    const payload = { ...form, amount: numAmount };
     if (editTxn) {
       editTransaction(editTxn.id, payload);
     } else {

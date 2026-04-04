@@ -51,30 +51,179 @@ export default function Dashboard() {
 
   const highestCategory = expensesByCategory.length > 0 ? expensesByCategory[0] : null;
 
+  const monthlyObservation = useMemo(() => {
+    const expenses = filteredTransactions.filter(t => t.type === 'expense');
+    const incomes = filteredTransactions.filter(t => t.type === 'income');
+    
+    if (expenses.length === 0) return "No expenses recorded to generate observations.";
+
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    const getMonthYear = (dateStr) => {
+      const d = new Date(dateStr);
+      return { m: d.getMonth(), y: d.getFullYear() };
+    };
+
+    const thisMonthExpenses = expenses.filter(t => { const d = getMonthYear(t.date); return d.m === currentMonth && d.y === currentYear; });
+    const lastMonthExpenses = expenses.filter(t => { 
+      const d = getMonthYear(t.date); 
+      const lm = currentMonth === 0 ? 11 : currentMonth - 1;
+      const ly = currentMonth === 0 ? currentYear - 1 : currentYear;
+      return d.m === lm && d.y === ly; 
+    });
+
+    const thisMonthTotal = thisMonthExpenses.reduce((acc, t) => acc + t.amount, 0);
+    const lastMonthTotal = lastMonthExpenses.reduce((acc, t) => acc + t.amount, 0);
+
+    const thisMonthIncomeTotal = incomes.filter(t => { const d = getMonthYear(t.date); return d.m === currentMonth && d.y === currentYear; }).reduce((acc, t) => acc + t.amount, 0);
+    const lastMonthIncomeTotal = incomes.filter(t => { 
+      const d = getMonthYear(t.date); 
+      const lm = currentMonth === 0 ? 11 : currentMonth - 1;
+      const ly = currentMonth === 0 ? currentYear - 1 : currentYear;
+      return d.m === lm && d.y === ly; 
+    }).reduce((acc, t) => acc + t.amount, 0);
+
+    const thisMonthSavings = thisMonthIncomeTotal - thisMonthTotal;
+    const lastMonthSavings = lastMonthIncomeTotal - lastMonthTotal;
+
+    const observations = [];
+
+    // 3. Unusual Spending Alert
+    const categoryTotals = {};
+    expenses.forEach(e => {
+        categoryTotals[e.category] = (categoryTotals[e.category] || 0) + e.amount;
+    });
+    const thisMonthCatTotals = {};
+    thisMonthExpenses.forEach(e => {
+      thisMonthCatTotals[e.category] = (thisMonthCatTotals[e.category] || 0) + e.amount;
+    });
+    
+    const monthsSet = new Set(expenses.map(e => e.date.substring(0, 7)));
+    const monthsCount = monthsSet.size || 1;
+    let unusualAlert = null;
+    for (const cat in thisMonthCatTotals) {
+       const avgCategory = (categoryTotals[cat] || 0) / monthsCount;
+       if (thisMonthCatTotals[cat] > avgCategory * 1.5 && avgCategory > 0) {
+         unusualAlert = `🚨 Unusual spending detected in ${cat} this month`;
+         break;
+       }
+    }
+    if (unusualAlert) observations.push(unusualAlert);
+
+    // 4. Savings Insight
+    const savingsDiff = thisMonthSavings - lastMonthSavings;
+    if (savingsDiff > 0 && lastMonthSavings > 0) {
+      observations.push(`💰 Great! You saved ₹${savingsDiff} more than last month`);
+    }
+
+    // 1. Spending Trend Insight
+    if (thisMonthTotal > lastMonthTotal && lastMonthTotal > 0) {
+      const percent = ((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 100;
+      if (percent > 0) {
+        observations.push(`📈 Spending increased by ${percent.toFixed(1)}% compared to last month`);
+      }
+    }
+
+    // 5. Frequent Small Expenses
+    const smallExpenses = expenses.filter(e => e.amount < 200);
+    if (smallExpenses.length > 10) {
+      observations.push("💳 Frequent small expenses are adding up significantly");
+    }
+
+    // 2. Category Dominance
+    if (totalExpense > 0 && highestCategory) {
+       const percent = (highestCategory.amount / totalExpense) * 100;
+       observations.push(`📊 ${highestCategory.name} accounts for ${percent.toFixed(1)}% of your spending`);
+    }
+
+    // 6. Peak Spending Day
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const spendingByDay = {};
+    expenses.forEach(e => {
+        const d = new Date(e.date).getDay();
+        spendingByDay[d] = (spendingByDay[d] || 0) + e.amount;
+    });
+    const peakDayIndex = Object.keys(spendingByDay).sort((a,b) => spendingByDay[b] - spendingByDay[a])[0];
+    if (peakDayIndex !== undefined) {
+      observations.push(`📅 You spend most on ${days[peakDayIndex]}s`);
+    }
+
+    if (observations.length > 0) {
+      // Pick a random observation on each calculation (page refresh)
+      const randomIndex = Math.floor(Math.random() * observations.length);
+      return observations[randomIndex];
+    }
+    
+    return "💡 Savings rate looks healthy relative to expenses.";
+  }, [filteredTransactions, totalExpense, highestCategory]);
   // Dynamic SVG Path for Line Chart based on balance over time
   const trendPaths = useMemo(() => {
     const sorted = [...filteredTransactions].sort((a, b) => new Date(a.date) - new Date(b.date));
     let runBal = 0;
-    const points = sorted.map(t => { runBal += (t.type === 'income' ? t.amount : -t.amount); return runBal; });
+    const dataPoints = sorted.map(t => { 
+        runBal += (t.type === 'income' ? t.amount : -t.amount); 
+        return { bal: runBal, date: t.date }; 
+    });
     
-    if (points.length < 2) return { d: 'M0,80 L100,80', area: 'M0,80 L100,80 L100,100 L0,100 Z' };
+    const color = '#38bdf8'; // Cyan color strictly from the image
+    const isPositive = dataPoints.length > 0 ? dataPoints[dataPoints.length - 1].bal >= 0 : true;
 
-    const min = Math.min(...points);
-    const max = Math.max(...points) || 1;
+    if (dataPoints.length < 2) return { d: 'M0,80 L100,80', color, isPositive, yLabels: [], xLabels: [] };
+
+    const min = Math.min(...dataPoints.map(d => d.bal));
+    const max = Math.max(...dataPoints.map(d => d.bal)) || 1;
     const range = (max - min) || 1;
-    const stepX = 100 / (points.length - 1);
+    const stepX = 100 / (dataPoints.length - 1);
     
-    const coords = points.map((p, i) => `${i * stepX},${100 - (((p - min) / range) * 60 + 20)}`);
-    const d = `M${coords.join(' L')}`;
-    const area = `${d} L100,100 L0,100 Z`;
+    const mappedPts = dataPoints.map((p, i) => ({
+       x: i * stepX,
+       y: 100 - (((p.bal - min) / range) * 80 + 10)
+    }));
+
+    // Smooth Bezier Curve 
+    let dStr = `M ${mappedPts[0].x},${mappedPts[0].y}`;
+    for (let i = 1; i < mappedPts.length; i++) {
+       const prev = mappedPts[i-1];
+       const curr = mappedPts[i];
+       const dx = (curr.x - prev.x) / 2;
+       dStr += ` C ${prev.x + dx},${prev.y} ${curr.x - dx},${curr.y} ${curr.x},${curr.y}`;
+    }
+
+    // Y Labels
+    const yLabels = [];
+    for(let i=0; i<=4; i++) {
+        const val = min + (range / 4) * i;
+        const normalizedY = 100 - (((val - min) / range) * 80 + 10);
+        let label = '';
+        const absVal = Math.abs(val);
+        if (absVal >= 1000000) label = (val/1000000).toFixed(1) + 'M';
+        else if (absVal >= 1000) label = (val/1000).toFixed(1) + 'K';
+        else label = val.toFixed(0);
+        yLabels.push({ val: label, top: normalizedY });
+    }
+
+    // X Labels
+    const xLabels = [];
+    const numX = Math.min(6, dataPoints.length);
+    for(let i=0; i<numX; i++) {
+       const index = Math.floor((dataPoints.length - 1) * (numX > 1 ? (i / (numX - 1)) : 0));
+       const pt = dataPoints[index];
+       if (!pt) continue;
+       const dateObj = new Date(pt.date);
+       const label = dateObj.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+       xLabels.push({ val: label, left: mappedPts[index].x });
+    }
     
-    return { d, area };
+    return { d: dStr, color, isPositive, yLabels, xLabels };
   }, [filteredTransactions]);
 
   // Format currency
   const formatCur = (num) => {
     const val = Number(num) || 0;
-    return '₹' + val.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    const sign = val < 0 ? '-' : '';
+    return sign + '₹' + Math.abs(val).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   };
 
   return (
@@ -176,8 +325,8 @@ export default function Dashboard() {
                  value={role}
                  onChange={(e) => setRole(e.target.value)}
                >
-                 <option value="viewer">Viewer (Read Only)</option>
-                 <option value="admin">Admin (Edit)</option>
+                 <option className="bg-white dark:bg-[#242730] text-gray-900 dark:text-white" value="viewer">Viewer (Read Only)</option>
+                 <option className="bg-white dark:bg-[#242730] text-gray-900 dark:text-white" value="admin">Admin (Edit)</option>
                </select>
             </div>
             
@@ -228,28 +377,28 @@ export default function Dashboard() {
               <div className="bg-white dark:bg-[#242730] rounded-2xl p-5 border border-gray-200 dark:border-[#2C2F36]">
                 <div className="text-gray-500 dark:text-[#8A8E93] text-sm mb-2">Total Balance</div>
                 <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{formatCur(totalBalance)}</div>
-                <div className="flex items-center gap-1 text-[#CDFE64] text-xs font-semibold">
+                <div className="flex items-center gap-1 text-[#4a6b18] dark:text-[#CDFE64] text-xs font-semibold">
                    <ArrowUpRight size={14} /> Calculated from visible data
                 </div>
               </div>
               <div className="bg-white dark:bg-[#242730] rounded-2xl p-5 border border-gray-200 dark:border-[#2C2F36]">
                 <div className="text-gray-500 dark:text-[#8A8E93] text-sm mb-2">Total Income</div>
                 <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{formatCur(totalIncome)}</div>
-                <div className="flex items-center gap-1 text-[#CDFE64] text-xs font-semibold">
+                <div className="flex items-center gap-1 text-[#4a6b18] dark:text-[#CDFE64] text-xs font-semibold">
                    <ArrowUpRight size={14} /> Visible Earnings
                 </div>
               </div>
               <div className="bg-white dark:bg-[#242730] rounded-2xl p-5 border border-gray-200 dark:border-[#2C2F36]">
                 <div className="text-gray-500 dark:text-[#8A8E93] text-sm mb-2">Total Expenses</div>
                 <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{formatCur(totalExpense)}</div>
-                <div className="flex items-center gap-1 text-[#FE6464] text-xs font-semibold">
+                <div className="flex items-center gap-1 text-red-600 dark:text-[#FE6464] text-xs font-semibold">
                    <ArrowDownRight size={14} /> Visible Spending
                 </div>
               </div>
               <div className="bg-white dark:bg-[#242730] rounded-2xl p-5 border border-gray-200 dark:border-[#2C2F36]">
                 <div className="text-gray-500 dark:text-[#8A8E93] text-sm mb-2">Activity Count</div>
                 <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{filteredTransactions.length}</div>
-                <div className="flex items-center gap-1 text-[#CDFE64] text-xs font-semibold">
+                <div className="flex items-center gap-1 text-[#4a6b18] dark:text-[#CDFE64] text-xs font-semibold">
                    <FileText size={14} /> Visible Recorded Transactions
                 </div>
               </div>
@@ -259,7 +408,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-12 gap-4 mb-4">
               
               {/* Expenses Breakdown Categorical Chart */}
-              <div className="col-span-6 bg-white dark:bg-[#242730] rounded-2xl p-6 border border-gray-200 dark:border-[#2C2F36] flex flex-col">
+              <div className="col-span-8 bg-white dark:bg-[#242730] rounded-2xl p-6 border border-gray-200 dark:border-[#2C2F36] flex flex-col">
                 <div className="flex justify-between items-start mb-6">
                    <h2 className="text-lg font-medium text-gray-900 dark:text-white">Expense Breakdown</h2>
                    <MoreVertical size={16} className="text-gray-500 dark:text-[#8A8E93] cursor-pointer" />
@@ -285,7 +434,7 @@ export default function Dashboard() {
                    </div>
                    
                    <div className="flex-1 ml-8 overflow-y-auto max-h-40 custom-scrollbar pr-2">
-                     <div className="grid grid-cols-1 gap-y-3 text-sm">
+                     <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                         {expensesByCategory.map(cat => (
                            <div key={cat.name} className="flex justify-between items-center">
                              <div className="flex items-center gap-2 text-gray-500 dark:text-[#8A8E93]">
@@ -301,52 +450,101 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Insights & Trend */}
-              <div className="col-span-6 flex flex-col gap-4">
-                 <div className="flex gap-4">
-                    <div className="bg-white dark:bg-[#242730] rounded-2xl p-5 border border-gray-200 dark:border-[#2C2F36] flex-1">
-                      <div className="w-8 h-8 rounded-full bg-[#3E2A2A] border border-[#512A2A] flex items-center justify-center text-[#FE6464] mb-3">
-                        <Zap size={16} />
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-[#8A8E93] mb-1">Highest Spending</div>
-                      <div className="flex items-end gap-2 text-gray-900 dark:text-white font-bold text-lg">
-                         {highestCategory ? highestCategory.name : 'Unknown'}
-                      </div>
-                      <div className="text-[10px] text-gray-500 dark:text-[#8A8E93] mt-1">{highestCategory ? formatCur(highestCategory.amount) : '₹0'}</div>
-                    </div>
-                    <div className="bg-white dark:bg-[#242730] rounded-2xl p-5 border border-gray-200 dark:border-[#2C2F36] flex-1">
-                      <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-[#2A371F] border border-green-200 dark:border-[#3E512A] flex items-center justify-center text-[#CDFE64] mb-3">
-                        <BarChart2 size={16} />
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-[#8A8E93] mb-1">Monthly Observation</div>
-                      <div className="flex gap-2 text-gray-900 dark:text-white font-medium text-sm leading-tight">
-                         Savings rate looks healthy relative to expenses.
-                      </div>
-                    </div>
-                 </div>
-
-                 {/* Line Chart Card (Time Based Vis) */}
-                 <div className="bg-white dark:bg-[#242730] rounded-2xl p-5 border border-gray-200 dark:border-[#2C2F36] flex-1 relative overflow-hidden">
-                    <div className="relative z-10 flex justify-between items-start">
+              {/* Insights */}
+              <div className="col-span-4 flex flex-col gap-4">
+                  <div className="bg-white dark:bg-[#242730] rounded-2xl p-6 border border-gray-200 dark:border-[#2C2F36] flex-1 flex flex-col justify-center relative overflow-hidden">
+                    <div className="relative z-10 flex items-center justify-between">
                        <div>
-                          <div className="text-sm font-medium text-gray-900 dark:text-white mb-1">Balance Trend</div>
-                          <div className="text-xs text-gray-500 dark:text-[#8A8E93] mb-2">Live computed overview</div>
+                         <div className="w-8 h-8 rounded-full bg-red-50 dark:bg-[#3E2A2A] border border-red-200 dark:border-[#512A2A] flex items-center justify-center text-red-600 dark:text-[#FE6464] mb-2">
+                           <Zap size={14} />
+                         </div>
+                         <div className="text-xs text-gray-500 dark:text-[#8A8E93] mb-1">Highest Spending</div>
+                         <div className="flex items-end gap-2 text-gray-900 dark:text-white font-bold text-lg">
+                            {highestCategory ? highestCategory.name : 'Unknown'}
+                         </div>
+                         <div className="text-[10px] text-gray-500 dark:text-[#8A8E93] mt-1">{highestCategory ? formatCur(highestCategory.amount) : '₹0'}</div>
                        </div>
-                       <div className="text-xl font-bold text-gray-900 dark:text-white">{formatCur(totalBalance)}</div>
                     </div>
-                    {/* Dynamic Area Chart */}
-                    <svg className="absolute bottom-0 left-0 w-full h-24" preserveAspectRatio="none" viewBox="0 0 100 100">
-                      <path fill="url(#gradient)" d={trendPaths.area} opacity="0.5"/>
-                      <path stroke="#CDFE64" strokeWidth="2" fill="none" d={trendPaths.d} />
-                      <defs>
-                        <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" stopColor="#CDFE64" stopOpacity="0.4" />
-                          <stop offset="100%" stopColor="#CDFE64" stopOpacity="0" />
-                        </linearGradient>
-                      </defs>
-                    </svg>
-                 </div>
+                  </div>
+                  <div className="bg-white dark:bg-[#242730] rounded-2xl p-6 border border-gray-200 dark:border-[#2C2F36] flex-1 flex flex-col justify-center relative overflow-hidden">
+                    <div className="relative z-10 flex items-center justify-between">
+                       <div>
+                         <div className="w-8 h-8 rounded-full bg-green-50 dark:bg-[#2A371F] border border-green-200 dark:border-[#3E512A] flex items-center justify-center text-green-600 dark:text-[#CDFE64] mb-2">
+                           <BarChart2 size={14} />
+                         </div>
+                         <div className="text-xs text-gray-500 dark:text-[#8A8E93] mb-1">Monthly Observation</div>
+                         <div className="flex gap-2 text-gray-900 dark:text-white font-medium text-sm leading-tight pr-4">
+                            {monthlyObservation}
+                         </div>
+                       </div>
+                    </div>
+                  </div>
               </div>
+            </div>
+
+            {/* Third Row: Big Line Chart (Time Based Vis) */}
+            <div className="bg-white dark:bg-[#242730] rounded-xl border border-gray-200 dark:border-[#2C2F36] mb-8 relative overflow-hidden flex flex-col min-h-[450px] shrink-0 shadow-sm font-sans pt-6">
+               <div className="relative z-10 px-8 flex justify-between items-start mb-4">
+                  <div>
+                     <div className="text-xl font-bold text-gray-900 dark:text-white mb-1 tracking-tight">Analyzing Profit Trends Over Time</div>
+                     <div className="text-xs text-gray-400 dark:text-[#8A8E93] font-medium tracking-wide border-b border-gray-100 dark:border-gray-800 pb-4">Line Chart</div>
+                  </div>
+               </div>
+               
+               {/* Main Chart Area */}
+               <div className="flex-1 w-full relative px-6 mt-4 pb-12 flex">
+                  
+                  {/* Y-Axis Labels */}
+                  <div className="absolute left-4 top-0 bottom-12 w-10 flex flex-col text-[9px] text-[#A1A1AA] dark:text-[#8A8E93] font-medium z-10 pointer-events-none">
+                     {trendPaths.yLabels.map((lbl, i) => (
+                        <div key={i} className="absolute w-full text-right" style={{ top: `calc(${lbl.top}% - 6px)` }}>
+                           {lbl.val}
+                        </div>
+                     ))}
+                  </div>
+
+                  {/* Graph Canvas */}
+                  <div className="flex-1 relative ml-12 border-l border-gray-100 dark:border-[#2C2F36]">
+                     {/* Horizontal Grid Lines */}
+                     <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-40 dark:opacity-20">
+                       <div className="border-b border-dashed border-gray-200 dark:border-[#52525B] w-full h-0"></div>
+                       <div className="border-b border-dashed border-gray-200 dark:border-[#52525B] w-full h-0"></div>
+                       <div className="border-b border-dashed border-gray-200 dark:border-[#52525B] w-full h-0"></div>
+                       <div className="border-b border-dashed border-gray-200 dark:border-[#52525B] w-full h-0"></div>
+                       <div className="border-b border-dashed border-gray-200 dark:border-[#52525B] w-full h-0"></div>
+                     </div>
+                     
+                     {/* Vertical Grid Lines */}
+                     <div className="absolute inset-0 flex justify-between pointer-events-none opacity-40 dark:opacity-20 pl-px">
+                       <div className="border-l border-dashed border-gray-200 dark:border-[#52525B] h-full w-0"></div>
+                       <div className="border-l border-dashed border-gray-200 dark:border-[#52525B] h-full w-0"></div>
+                       <div className="border-l border-dashed border-gray-200 dark:border-[#52525B] h-full w-0"></div>
+                       <div className="border-l border-dashed border-gray-200 dark:border-[#52525B] h-full w-0"></div>
+                       <div className="border-l border-dashed border-gray-200 dark:border-[#52525B] h-full w-0"></div>
+                       <div className="border-l border-dashed border-gray-200 dark:border-[#52525B] h-full w-0"></div>
+                     </div>
+
+                     {/* SVG Smooth Line Curve */}
+                     <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
+                       <path stroke="#0ea5e9" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" d={trendPaths.d} />
+                     </svg>
+                     
+                     {/* X-Axis Labels */}
+                     <div className="absolute left-0 right-0 -bottom-6 h-6 z-10 pointer-events-none">
+                        {trendPaths.xLabels.map((lbl, i) => (
+                           <div key={i} className="absolute text-[9px] text-[#A1A1AA] dark:text-[#8A8E93] font-medium whitespace-nowrap transform -translate-x-1/2" style={{ left: `${lbl.left}%` }}>
+                              {lbl.val}
+                           </div>
+                        ))}
+                     </div>
+                  </div>
+               </div>
+
+               {/* Footer text */}
+               <div className="absolute bottom-4 left-8 right-8 flex justify-between items-center text-[10px] text-[#A1A1AA] dark:text-[#8A8E93]">
+                  <span>Line Charts In Focus — A Comprehensive Guide to Effective Visualization</span>
+                  <span>@FinanceDashboard</span>
+               </div>
             </div>
 
             {/* Third Row (Transactions Table) */}

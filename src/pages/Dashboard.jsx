@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { 
   Search, Grid, BarChart2, Users, MessageSquare, Star, Settings, HelpCircle,
   Moon, Sun, RefreshCw, Bell, Globe, ChevronDown, MoreVertical, MoreHorizontal, ArrowUpRight, ArrowDownRight,
-  Monitor, ShoppingBag, PieChart as PieChartIcon, Phone, FileText, Zap, Hexagon, Plus, Trash2, Edit, Activity
+  Monitor, ShoppingBag, PieChart as PieChartIcon, Phone, FileText, Zap, Hexagon, Plus, Trash2, Edit, Activity, Menu, X
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import TransactionModal from '../components/TransactionModal';
@@ -24,6 +24,7 @@ export default function Dashboard() {
   const [editingTxn, setEditingTxn] = useState(null);
   const [activeTab, setActiveTab] = useState('Overview');
   const [showSidebar, setShowSidebar] = useState(true);
+  const [showLeftSidebar, setShowLeftSidebar] = useState(false);
 
   // ---------- CALCULATIONS ----------
   // Filtered transactions for the table and stats
@@ -230,11 +231,16 @@ export default function Dashboard() {
     <div className="flex w-full h-screen bg-[#F8F9FA] dark:bg-[#1F2128]">
       
       {/* LEFT SIDEBAR */}
-      <aside className="w-64 bg-white dark:bg-[#1A1C23] flex flex-col justify-between border-r border-gray-200 dark:border-[#2C2F36] shrink-0 h-full overflow-y-auto custom-scrollbar">
+      <aside className={`fixed z-40 lg:relative w-64 bg-white dark:bg-[#1A1C23] flex flex-col justify-between border-r border-gray-200 dark:border-[#2C2F36] shrink-0 h-full overflow-y-auto custom-scrollbar transition-transform ${showLeftSidebar ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'}`}>
         <div>
-          <div className="p-6 flex items-center gap-3">
-            <img src="https://i.pravatar.cc/150?img=11" alt="User" className="w-10 h-10 rounded-full" />
-            <div className="font-semibold text-gray-900 dark:text-white">Guy Hawkins</div>
+          <div className="p-6 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+               <img src="https://i.pravatar.cc/150?img=11" alt="User" className="w-10 h-10 rounded-full" />
+               <div className="font-semibold text-gray-900 dark:text-white">Guy Hawkins</div>
+            </div>
+            <button className="lg:hidden p-1 hover:bg-gray-100 dark:hover:bg-[#242730] rounded" onClick={() => setShowLeftSidebar(false)}>
+              <X size={20} className="text-gray-500 dark:text-[#8A8E93]" />
+            </button>
           </div>
 
           <div className="px-6 mb-6">
@@ -308,15 +314,18 @@ export default function Dashboard() {
       {/* CENTER CONTENT */}
       <main className="flex-1 flex flex-col h-full overflow-y-auto px-8 py-6 custom-scrollbar relative">
         {/* Header */}
-        <header className="flex items-center justify-between mb-8">
+        <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
           <div className="flex items-center gap-3 text-sm">
-            <Hexagon size={18} className="text-[#CDFE64]" />
-            <Star size={16} className="text-gray-500 dark:text-[#8A8E93]" />
-            <span className="text-gray-500 dark:text-[#8A8E93]">Dashboards</span>
-            <span className="text-gray-500 dark:text-[#8A8E93]">/</span>
+            <button className="lg:hidden p-1 hover:bg-gray-200 dark:hover:bg-[#2C2F36] rounded" onClick={() => setShowLeftSidebar(!showLeftSidebar)}>
+              <Menu size={20} className="text-gray-900 dark:text-white" />
+            </button>
+            <Hexagon size={18} className="text-[#CDFE64] hidden sm:block" />
+            <Star size={16} className="text-gray-500 dark:text-[#8A8E93] hidden sm:block" />
+            <span className="text-gray-500 dark:text-[#8A8E93] hidden sm:block">Dashboards</span>
+            <span className="text-gray-500 dark:text-[#8A8E93] hidden sm:block">/</span>
             <span className="text-gray-900 dark:text-white font-medium">Overview</span>
           </div>
-          <div className="flex items-center gap-4 text-gray-500 dark:text-[#8A8E93]">
+          <div className="flex items-center gap-4 text-gray-500 dark:text-[#8A8E93] w-full sm:w-auto justify-between sm:justify-end">
             {/* ROLE TOGGLE */}
             <div className="flex items-center gap-2 bg-white dark:bg-[#242730] px-3 py-1.5 rounded-lg border border-gray-200 dark:border-[#2C2F36]">
                <span className="text-xs font-medium uppercase">Role:</span>
@@ -346,10 +355,10 @@ export default function Dashboard() {
         </header>
 
         {/* Title */}
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <h1 className="text-3xl font-display font-medium text-gray-900 dark:text-white">{activeTab}</h1>
             {isAdmin && activeTab === 'Overview' && (
-               <div className="flex gap-3">
+               <div className="flex flex-wrap gap-3">
                  <button 
                    onClick={() => {
                      if(window.confirm('Are you sure you want to delete all transactions and reset data to zero? This cannot be undone.')) {
@@ -373,7 +382,7 @@ export default function Dashboard() {
         {activeTab === 'Overview' ? (
           <>
             {/* Stats Row */}
-            <div className="grid grid-cols-4 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
               <div className="bg-white dark:bg-[#242730] rounded-2xl p-5 border border-gray-200 dark:border-[#2C2F36]">
                 <div className="text-gray-500 dark:text-[#8A8E93] text-sm mb-2">Total Balance</div>
                 <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{formatCur(totalBalance)}</div>
@@ -405,16 +414,16 @@ export default function Dashboard() {
             </div>
 
             {/* Second Row */}
-            <div className="grid grid-cols-12 gap-4 mb-4">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-4">
               
               {/* Expenses Breakdown Categorical Chart */}
-              <div className="col-span-8 bg-white dark:bg-[#242730] rounded-2xl p-6 border border-gray-200 dark:border-[#2C2F36] flex flex-col">
+              <div className="col-span-1 lg:col-span-8 bg-white dark:bg-[#242730] rounded-2xl p-6 border border-gray-200 dark:border-[#2C2F36] flex flex-col">
                 <div className="flex justify-between items-start mb-6">
                    <h2 className="text-lg font-medium text-gray-900 dark:text-white">Expense Breakdown</h2>
                    <MoreVertical size={16} className="text-gray-500 dark:text-[#8A8E93] cursor-pointer" />
                 </div>
-                <div className="flex items-center justify-between flex-1">
-                   <div className="relative flex items-center justify-center w-40 h-40">
+                <div className="flex flex-col sm:flex-row items-center justify-between flex-1 gap-6">
+                   <div className="relative flex items-center justify-center w-40 h-40 shrink-0">
                       <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
                         <path className="text-gray-100 dark:text-[#2C2F36]" strokeWidth="4" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                         {expensesByCategory.map((cat, i) => {
@@ -433,8 +442,8 @@ export default function Dashboard() {
                       </div>
                    </div>
                    
-                   <div className="flex-1 ml-8 overflow-y-auto max-h-40 custom-scrollbar pr-2">
-                     <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                   <div className="flex-1 w-full sm:ml-8 overflow-y-auto max-h-40 sm:max-h-56 custom-scrollbar pr-2">
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 text-sm">
                         {expensesByCategory.map(cat => (
                            <div key={cat.name} className="flex justify-between items-center">
                              <div className="flex items-center gap-2 text-gray-500 dark:text-[#8A8E93]">
@@ -451,7 +460,7 @@ export default function Dashboard() {
               </div>
 
               {/* Insights */}
-              <div className="col-span-4 flex flex-col gap-4">
+              <div className="col-span-1 lg:col-span-4 flex flex-col gap-4">
                   <div className="bg-white dark:bg-[#242730] rounded-2xl p-6 border border-gray-200 dark:border-[#2C2F36] flex-1 flex flex-col justify-center relative overflow-hidden">
                     <div className="relative z-10 flex items-center justify-between">
                        <div>
@@ -541,7 +550,7 @@ export default function Dashboard() {
                </div>
 
                {/* Footer text */}
-               <div className="absolute bottom-4 left-8 right-8 flex justify-between items-center text-[10px] text-[#A1A1AA] dark:text-[#8A8E93]">
+               <div className="absolute bottom-4 left-4 right-4 sm:left-8 sm:right-8 flex flex-col sm:flex-row justify-between items-center text-[10px] text-[#A1A1AA] dark:text-[#8A8E93] text-center gap-2">
                   <span>Line Charts In Focus — A Comprehensive Guide to Effective Visualization</span>
                   <span>@FinanceDashboard</span>
                </div>
@@ -613,15 +622,20 @@ export default function Dashboard() {
 
       {/* RIGHT SIDEBAR */}
       {showSidebar && (
-        <aside className="w-[300px] bg-white dark:bg-[#1A1C23] flex flex-col border-l border-gray-200 dark:border-[#2C2F36] shrink-0 h-full overflow-y-auto p-6 custom-scrollbar">
+        <aside className="absolute right-0 xl:relative z-40 w-full sm:w-[300px] bg-white dark:bg-[#1A1C23] flex flex-col border-l border-gray-200 dark:border-[#2C2F36] shrink-0 h-full overflow-y-auto p-6 custom-scrollbar shadow-2xl xl:shadow-none">
            <div className="mb-8">
               <h3 className="text-gray-900 dark:text-white font-medium mb-6 flex justify-between items-center">
                 <span>Notifications</span>
-                {notifications.length > 0 && (
-                  <button onClick={clearNotifications} className="text-xs text-gray-500 hover:text-red-500 transition-colors bg-gray-100 dark:bg-[#2C2F36] px-2 py-1 rounded">
-                    Clear All
+                <div className="flex items-center gap-2">
+                  {notifications.length > 0 && (
+                    <button onClick={clearNotifications} className="text-xs text-gray-500 hover:text-red-500 transition-colors bg-gray-100 dark:bg-[#2C2F36] px-2 py-1 rounded">
+                      Clear All
+                    </button>
+                  )}
+                  <button className="xl:hidden p-1 hover:bg-gray-100 dark:hover:bg-[#2C2F36] rounded text-gray-500" onClick={() => setShowSidebar(false)}>
+                    <X size={18} />
                   </button>
-                )}
+                </div>
               </h3>
               <ul className="space-y-4">
                  {notifications.length === 0 && (

@@ -228,10 +228,10 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex w-full h-screen bg-[#F8F9FA] dark:bg-[#1F2128]">
+    <div className="flex w-full h-screen bg-[#F8F9FA] dark:bg-[#1F2128] relative overflow-hidden">
       
       {/* LEFT SIDEBAR */}
-      <aside className={`fixed z-40 lg:relative w-64 bg-white dark:bg-[#1A1C23] flex flex-col justify-between border-r border-gray-200 dark:border-[#2C2F36] shrink-0 h-full overflow-y-auto custom-scrollbar transition-transform ${showLeftSidebar ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'}`}>
+      <aside className={`fixed z-40 lg:relative w-64 bg-white dark:bg-[#1A1C23] flex flex-col justify-between border-r border-gray-200 dark:border-[#2C2F36] shrink-0 h-full overflow-y-auto custom-scrollbar transition-transform duration-300 ease-in-out ${showLeftSidebar ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'}`}>
         <div>
           <div className="p-6 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -621,8 +621,14 @@ export default function Dashboard() {
       </main>
 
       {/* RIGHT SIDEBAR */}
-      {showSidebar && (
-        <aside className="absolute right-0 xl:relative z-40 w-full sm:w-[300px] bg-white dark:bg-[#1A1C23] flex flex-col border-l border-gray-200 dark:border-[#2C2F36] shrink-0 h-full overflow-y-auto p-6 custom-scrollbar shadow-2xl xl:shadow-none">
+      <aside 
+        className={`absolute xl:relative right-0 top-0 z-40 bg-white dark:bg-[#1A1C23] flex flex-col border-l border-gray-200 dark:border-[#2C2F36] shrink-0 h-full p-6 custom-scrollbar transition-all duration-300 ease-in-out shadow-2xl xl:shadow-none overflow-x-hidden overflow-y-auto ${
+          showSidebar 
+            ? 'w-full sm:w-[300px] translate-x-0 opacity-100' 
+            : 'w-full sm:w-[300px] xl:w-0 xl:p-0 xl:border-none translate-x-full xl:translate-x-0 opacity-0 pointer-events-none'
+        }`}
+      >
+        <div className="w-full min-w-[252px] flex flex-col h-full shrink-0">
            <div className="mb-8">
               <h3 className="text-gray-900 dark:text-white font-medium mb-6 flex justify-between items-center">
                 <span>Notifications</span>
@@ -675,10 +681,10 @@ export default function Dashboard() {
                      <Phone size={12} className="text-[#111315]" />
                    </div>
                  </li>
-              </ul>
-           </div>
-        </aside>
-      )}
+               </ul>
+            </div>
+        </div>
+      </aside>
 
       {/* Render Modal if requested */}
       {modalOpen && <TransactionModal onClose={() => setModalOpen(false)} editTxn={editingTxn} />}

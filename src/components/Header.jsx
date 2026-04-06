@@ -13,7 +13,7 @@ export default function Header() {
             <span className="text-white dark:text-ink-900 text-xs font-display font-bold">L</span>
           </div>
           <span className="font-display font-semibold text-ink-900 dark:text-ink-100 tracking-tight">
-            Ledger
+            FINDAS
           </span>
         </div>
 

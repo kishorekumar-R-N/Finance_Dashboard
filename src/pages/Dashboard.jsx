@@ -235,8 +235,8 @@ export default function Dashboard() {
         <div>
           <div className="p-6 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-               <img src="https://i.pravatar.cc/150?img=11" alt="User" className="w-10 h-10 rounded-full" />
-               <div className="font-semibold text-gray-900 dark:text-white">Guy Hawkins</div>
+               <img src="/thor.png" alt="User" className="w-10 h-10 rounded-full object-cover" />
+               <div className="font-semibold text-gray-900 dark:text-white">Thor</div>
             </div>
             <button className="lg:hidden p-1 hover:bg-gray-100 dark:hover:bg-[#242730] rounded" onClick={() => setShowLeftSidebar(false)}>
               <X size={20} className="text-gray-500 dark:text-[#8A8E93]" />
@@ -270,15 +270,6 @@ export default function Dashboard() {
               </li>
               <li>
                 <button 
-                  onClick={() => setActiveTab('eCommerce')} 
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-colors ${activeTab === 'eCommerce' ? 'bg-[#CDFE64] text-[#111315] font-semibold shadow-[0_0_15px_rgba(205,254,100,0.3)]' : 'text-gray-500 dark:text-[#8A8E93] hover:text-gray-900 dark:text-white'}`}
-                >
-                  <ShoppingBag size={18} />
-                  <span>eCommerce</span>
-                </button>
-              </li>
-              <li>
-                <button 
                   onClick={() => setActiveTab('Analytics')} 
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-colors ${activeTab === 'Analytics' ? 'bg-[#CDFE64] text-[#111315] font-semibold shadow-[0_0_15px_rgba(205,254,100,0.3)]' : 'text-gray-500 dark:text-[#8A8E93] hover:text-gray-900 dark:text-white'}`}
                 >
@@ -306,7 +297,7 @@ export default function Dashboard() {
         <div className="p-6 mt-8">
           <div className="flex items-center gap-2 text-gray-900 dark:text-white font-bold opacity-50">
             <Hexagon size={24} className="text-[#CDFE64]" fill="currentColor" />
-            <span className="tracking-widest">DWISON</span>
+            <span className="tracking-widest">FINDAS</span>
           </div>
         </div>
       </aside>
@@ -323,7 +314,7 @@ export default function Dashboard() {
             <Star size={16} className="text-gray-500 dark:text-[#8A8E93] hidden sm:block" />
             <span className="text-gray-500 dark:text-[#8A8E93] hidden sm:block">Dashboards</span>
             <span className="text-gray-500 dark:text-[#8A8E93] hidden sm:block">/</span>
-            <span className="text-gray-900 dark:text-white font-medium">Overview</span>
+            <span className="text-gray-900 dark:text-white font-medium">{activeTab}</span>
           </div>
           <div className="flex items-center gap-4 text-gray-500 dark:text-[#8A8E93] w-full sm:w-auto justify-between sm:justify-end">
             {/* ROLE TOGGLE */}
@@ -610,9 +601,95 @@ export default function Dashboard() {
               </div>
             </div>
           </>
+        ) : activeTab === 'Analytics' ? (
+          <div className="flex flex-col gap-6 w-full animate-fade-in pb-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white dark:bg-[#242730] rounded-2xl p-5 border border-gray-200 dark:border-[#2C2F36]">
+                <div className="text-gray-500 dark:text-[#8A8E93] text-sm mb-2">Highest Expense</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{formatCur(Math.max(0, ...filteredTransactions.filter(t => t.type === 'expense').map(t => t.amount)))}</div>
+                <div className="text-xs text-[#FE6464] font-medium">Largest single spend</div>
+              </div>
+              <div className="bg-white dark:bg-[#242730] rounded-2xl p-5 border border-gray-200 dark:border-[#2C2F36]">
+                <div className="text-gray-500 dark:text-[#8A8E93] text-sm mb-2">Highest Income</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{formatCur(Math.max(0, ...filteredTransactions.filter(t => t.type === 'income').map(t => t.amount)))}</div>
+                <div className="text-xs text-[#CDFE64] font-medium">Largest single earning</div>
+              </div>
+              <div className="bg-white dark:bg-[#242730] rounded-2xl p-5 border border-gray-200 dark:border-[#2C2F36]">
+                <div className="text-gray-500 dark:text-[#8A8E93] text-sm mb-2">Average Expense</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                  {formatCur(filteredTransactions.filter(t => t.type === 'expense').length ? totalExpense / filteredTransactions.filter(t => t.type === 'expense').length : 0)}
+                </div>
+                <div className="text-xs text-gray-400 dark:text-[#8A8E93] font-medium">Per transaction</div>
+              </div>
+              <div className="bg-white dark:bg-[#242730] rounded-2xl p-5 border border-gray-200 dark:border-[#2C2F36]">
+                <div className="text-gray-500 dark:text-[#8A8E93] text-sm mb-2">Savings Rate</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                  {totalIncome > 0 ? ((totalBalance / totalIncome) * 100).toFixed(1) : 0}%
+                </div>
+                <div className="text-xs text-[#CDFE64] font-medium">Of total income</div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white dark:bg-[#242730] rounded-2xl p-6 border border-gray-200 dark:border-[#2C2F36]">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6">Expense Categories Analysis</h3>
+                <div className="space-y-6">
+                  {expensesByCategory.map((cat) => (
+                    <div key={cat.name}>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{cat.name}</span>
+                        <span className="text-sm text-gray-500 dark:text-[#8A8E93]">{formatCur(cat.amount)} <span className="text-xs opacity-70">({(cat.amount / (totalExpense || 1) * 100).toFixed(1)}%)</span></span>
+                      </div>
+                      <div className="w-full bg-gray-100 dark:bg-[#1A1C23] rounded-full h-2.5">
+                        <div className="h-2.5 rounded-full" style={{ width: `${(cat.amount / (totalExpense || 1)) * 100}%`, backgroundColor: cat.color }}></div>
+                      </div>
+                    </div>
+                  ))}
+                  {expensesByCategory.length === 0 && <div className="text-sm text-gray-500">No data available</div>}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-6">
+                <div className="bg-[#CDFE64] rounded-2xl p-6 border border-[#bce856] text-[#111315] shadow-sm relative overflow-hidden flex flex-col justify-center min-h-[160px]">
+                  <div className="relative z-10">
+                    <h3 className="text-lg font-bold mb-2">Financial Health Check</h3>
+                    <p className="text-sm opacity-90 mb-4">{monthlyObservation}</p>
+                    <div className="inline-flex items-center gap-1 font-semibold text-xs uppercase tracking-wider bg-black/10 px-3 py-1 rounded-lg">
+                       <Zap size={14} /> AI Insight
+                    </div>
+                  </div>
+                  <Hexagon size={120} className="absolute -right-6 -bottom-6 opacity-10" />
+                </div>
+                
+                <div className="bg-white dark:bg-[#242730] rounded-2xl p-6 border border-gray-200 dark:border-[#2C2F36] flex-1">
+                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6">Cash Flow</h3>
+                   <div className="flex flex-col justify-center h-full gap-8 pb-4">
+                     <div>
+                       <div className="flex justify-between text-sm mb-3">
+                         <span className="text-gray-500 dark:text-[#8A8E93] font-medium">Income</span>
+                         <span className="font-bold text-gray-900 dark:text-white">{formatCur(totalIncome)}</span>
+                       </div>
+                       <div className="w-full bg-gray-100 dark:bg-[#1A1C23] rounded-full h-4">
+                          <div className="bg-[#CDFE64] h-4 rounded-full shadow-[0_0_10px_rgba(205,254,100,0.5)] transition-all duration-1000" style={{ width: `${totalIncome > 0 ? 100 : 0}%` }}></div>
+                       </div>
+                     </div>
+                     <div>
+                       <div className="flex justify-between text-sm mb-3">
+                         <span className="text-gray-500 dark:text-[#8A8E93] font-medium">Expenses</span>
+                         <span className="font-bold text-gray-900 dark:text-white">{formatCur(totalExpense)}</span>
+                       </div>
+                       <div className="w-full bg-gray-100 dark:bg-[#1A1C23] rounded-full h-4">
+                          <div className="bg-[#FE6464] h-4 rounded-full shadow-[0_0_10px_rgba(254,100,100,0.5)] transition-all duration-1000" style={{ width: `${totalIncome > 0 ? Math.min((totalExpense / totalIncome) * 100, 100) : (totalExpense > 0 ? 100 : 0)}%` }}></div>
+                       </div>
+                     </div>
+                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-gray-500 dark:text-[#8A8E93]">
-            <Hexagon size={64} className="mb-4 text-[#CDFE64] opacity-20" />
+            <Settings size={64} className="mb-4 text-[#CDFE64] opacity-20" />
             <h2 className="text-2xl font-medium text-gray-900 dark:text-white mb-2">{activeTab} Module</h2>
             <p>This module is currently under development.</p>
           </div>
@@ -662,27 +739,7 @@ export default function Dashboard() {
            </div>
 
            {/* Contacts (Visual retention) */}
-           <div>
-              <h3 className="text-gray-900 dark:text-white font-medium mb-6">Manager Contacts</h3>
-              <ul className="space-y-2">
-                 <li className="flex items-center justify-between p-2 hover:bg-white dark:bg-[#242730] rounded-xl transition-colors cursor-pointer">
-                   <div className="flex items-center gap-3">
-                     <img src="https://i.pravatar.cc/150?img=33" alt="Avatar" className="w-8 h-8 rounded-full" />
-                     <span className="text-sm text-gray-900 dark:text-white">Daniel Craig</span>
-                   </div>
-                   <MoreHorizontal size={14} className="text-gray-500 dark:text-[#8A8E93]" />
-                 </li>
-                 <li className="flex items-center justify-between p-2 pl-3 bg-[#CDFE64] rounded-2xl shadow-[0_0_15px_rgba(205,254,100,0.3)] mt-2 mb-2 cursor-pointer relative">
-                   <div className="flex items-center gap-3 relative z-10 text-[#111315]">
-                     <img src="https://i.pravatar.cc/150?img=11" alt="Avatar" className="w-8 h-8 rounded-full border-2 border-[#1A1C23]" />
-                     <span className="text-sm font-bold">Nataniel Donowan</span>
-                   </div>
-                   <div className="w-6 h-6 rounded-md bg-[#111315]/10 flex items-center justify-center">
-                     <Phone size={12} className="text-[#111315]" />
-                   </div>
-                 </li>
-               </ul>
-            </div>
+          
         </div>
       </aside>
 
